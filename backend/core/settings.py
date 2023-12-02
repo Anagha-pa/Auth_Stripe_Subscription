@@ -57,7 +57,7 @@ REST_FRAMEWORK = {
 }
 SIMPLE_JWT = {
 
-    "ACCESS_TOKEN_LIFETIME": timedelta(hours=200),
+    "ACCESS_TOKEN_LIFETIME": timedelta(days= 90),
     "REFRESH_TOKEN_LIFETIME": timedelta(days= 90),
     "ROTATE_REFRESH_TOKENS": True,
     "BLACKLIST_AFTER_ROTATION": True,
@@ -103,6 +103,8 @@ AUTH_USER_MODEL = 'account.CustomUser'
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
 
 DATABASES = {
+
+    
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
         'NAME': BASE_DIR / 'db.sqlite3',

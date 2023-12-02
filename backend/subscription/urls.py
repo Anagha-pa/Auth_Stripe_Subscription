@@ -1,10 +1,10 @@
 from django.urls import path
-from .views import SubscriptionView,UserDashboard
+from .views import StripePayment
 
 urlpatterns = [
     
-    path('subscriptions/',SubscriptionView.as_view()),
-    path('user-dashboard/<int:id>/',UserDashboard.as_view()),
+    path('stripe-payment/<int:id>',StripePayment.as_view()),
+    
     
     
 ]

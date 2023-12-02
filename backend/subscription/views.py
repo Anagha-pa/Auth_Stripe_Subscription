@@ -1,12 +1,12 @@
 from django.shortcuts import render
 from rest_framework.views import APIView
-from .models import SubscriptionType,Subscription
+from .models import SubscriptionType
 from account.models import CustomUser
 from django.conf import settings
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework import generics
-from .serializers import DashboardSerializer
+from .serializers import SubscriptionTypeSerializer
 
 
 
@@ -18,51 +18,61 @@ import stripe
 stripe.api_key = settings.STRIPE_SECRET_KEY
 
 
-class SubscriptionView(APIView):
+
+class StripePayment(APIView):
     def post(self,request):
-        data = request.data
-        first_name = data['first_name']
-        last_name = data['last_name']
-        email = data['email']
-        phone = data['phone']
-        sub_type = data['sub_type']
-
-        subscription_type = SubscriptionType.objects.get(type=sub_type)
-        user = CustomUser.objects.create(username=email,first_name=first_name,last_name=last_name,email=email,phone=phone)
-        subscription = Subscription.objects.create(user=user, subscription_name=subscription_type)
-
-        try:
-            checkout_session = stripe.checkout.Session.create(
-                line_items=[{
-                    'price_data': {
-                        'currency': 'INR',  
-                        'product_data': {
-                            'name':subscription_type.type ,
-                            'images':subscription_type.image
+   
+            try:
+                subscriptiontype = SubscriptionType.objects.get(id=request.data.get('subscriptiontype'))
+                checkout_session = stripe.checkout.Session.create(
+                    line_items=[{
+                        'price_data': {
+                            'currency': 'INR',  
+                            'product_data': {
+                                'name':subscriptiontype.type ,
+                                'images':subscriptiontype.image
+                            },
+                            'unit_amount':int(subscriptiontype.price),
                         },
-                        'unit_amount':int(subscription_type.price),
+                        'quantity': 1
+                    }],
+                    metadata={
+                        "subcrip_type_id":subscriptiontype.id
                     },
-                    'quantity': 1
-                }],
-                mode='payment',
-                success_url=f'http://localhost:3000/Register/subId={subscription.id}',
-                cancel_url=f'http://localhost:3000/Register/'
-            )
-            return Response(data=checkout_session.url)
-        except Exception as e:
-            print(e)
-            return Response(
-                data={'message': 'Oops!Some error occured!'},
-                status=status.HTTP_400_BAD_REQUEST
-            )
+                    mode='payment',
+                    success_url=f'http://localhost:3000/Register/subId={subscriptiontype.id}',
+                    cancel_url=f'http://localhost:3000/Register/'
+                )
+                user_data=CustomUser.objects.get(id=request.data.get("user_data_id"))
+                user_data.subcrip_type = subscriptiontype.type
+                user_data.stripe_checkout_session_id = checkout_session.id
+                user_data.subcrip = True
+                user_data.save()
+                return Response(data={'url': checkout_session.url})
+            except Exception as e:
+                return Response(data={'message': 'Oops!Some error occured!'},status=status.HTTP_400_BAD_REQUEST)
+            
+
+    def get(self,request):
+        try:
+            subscriptiontypes = SubscriptionType.objects.all()
+            serializer = SubscriptionTypeSerializer(subscriptiontypes, many=True)
+            return Response(serializer.data,status=status.HTTP_200_OK)
+        except Exception as e :
+             return Response(data={'message':'Oops!Some error occurred !'},status=status.HTTP_400_BAD_REQUEST)
+    
+        
+
+
+        
+
+        
 
 
 
 
-class UserDashboard(generics.RetrieveAPIView):
-    serializer_class = DashboardSerializer
-    queryset=Subscription.objects.all()
-    lookup_field="id"
+
+
         
 
         

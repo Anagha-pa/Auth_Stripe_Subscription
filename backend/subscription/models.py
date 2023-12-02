@@ -1,5 +1,5 @@
 from django.db import models
-from account.models import CustomUser
+
 
 
 
@@ -13,11 +13,13 @@ class SubscriptionType(models.Model):
 
     def __str__(self):
         return self.type
+        
+
     
 
-class Subscription(models.Model):
-    user = models.ForeignKey(CustomUser,on_delete=models.CASCADE)
-    subscription_name = models.ForeignKey(SubscriptionType,on_delete=models.CASCADE)
-    payment_status = models.BooleanField(default=False)
+# class Subscription(models.Model):
+#     user = models.ForeignKey(CustomUser,on_delete=models.CASCADE)
+#     subscription_name = models.ForeignKey(SubscriptionType,on_delete=models.CASCADE)
+#     payment_status = models.BooleanField(default=False)
 
 

@@ -2,8 +2,10 @@ from django.shortcuts import render
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
-from .serializers import RegisterSerializer,UserCreateSerializer
+from .serializers import RegisterSerializer,UserDetailSerializer
 from .models import CustomUser
+from django.contrib.auth import authenticate,login
+from rest_framework import generics
 
 
 
@@ -14,50 +16,46 @@ class Register(APIView):
         try:
             serializer = RegisterSerializer(data=request.data)
             if serializer.is_valid():
-                serializer.save()
+                user=serializer.save()
                 return Response({'message':'User registered successfully'}, status=status.HTTP_201_CREATED)
-            return Response({'message':'User With this email or mobile number already exists',},status=status.HTTP_400_BAD_REQUEST)
+            return Response(data=serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         
         except Exception as e:
-            return Response({'message': 'An error occurred during registration.'},status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-
-class GoogleLoginView(APIView):
-    
-    def post(self, request):
-        email = request.data.get("email")
-        password = request.data.get("password")
+            print(e)
+            return Response(data={'message': 'Oops! Some error occurred!'}, status=status.HTTP_400_BAD_REQUEST)
         
 
-        try:
-            user_exists = CustomUser.objects.filter(email=email).exists()
 
-            if user_exists:
-                return Response(
-                    {"message": "User already exist"}, status=status.HTTP_200_OK
-                )
+class PasswordCreation(APIView):
+    def post(self,request):
+        user_data = CustomUser.objects.get(id=request.data.get('user_data_id'))
+        password = request.data.get('password')
+        confrim_password = request.data.get('confrim_password')
 
-            else:
-                data = {
-                    "email": email,
-                    "password": password,
-                   
-                }
+        if password != confrim_password:
+            return Response({'message':'password and confrim password is not matches'},status=status.HTTP_400_BAD_REQUEST)
+        
+        user_data.set_password(password)
+        user_data.is_active = True
+        user_data.save()
+        return Response({'message':'Password created successfully'},status=status.HTTP_200_OK)
 
-                serializer = UserCreateSerializer(data=data)
-                if serializer.is_valid():
-                    user = serializer.save()
-                    return Response(
-                        {"message": "User created successfully"},
-                        status=status.HTTP_201_CREATED,
-                    )
-                else:
-                    return Response(
-                        serializer.errors, status=status.HTTP_400_BAD_REQUEST
-                    )
 
-        except Exception as e:
-            print(str(e))
-            return Response({"message": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
-    
+class LoginAPI(APIView):
+        def post(self,request):
+            email = request.data.get('email')
+            password = request.data.get('password')
+            user = authenticate(request, email=email,password=password)
+            
+            if user:
+                login(request,user)
+                return Response({'message':'user login successfully'},status=status.HTTP_200_OK)
+            return Response({'message':'Invalid Credenitials'},status=status.HTTP_401_UNAUTHORIZED)
+            
+
+
+class UserDetails(generics.RetrieveAPIView):    
+    queryset = CustomUser.objects.all()
+    serializer_class = UserDetailSerializer
+    lookup_field = 'id'        
